@@ -19,15 +19,7 @@
 
 ## Installation
 
-Wally:
-
-```toml
-[dependencies]
-Socket = "RoSocket/rosocket@1.0.1"
-```
-
 Roblox Model:
-Click [here](https://create.roblox.com/store/asset/17132752732/RoSocket) or
 Download from [Releases](https://github.com/RoSocket/rosocket/releases)
 (we recommend you get the marketplace one which will always be the latest one)
 
