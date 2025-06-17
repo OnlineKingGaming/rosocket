@@ -8,9 +8,9 @@
 ]]--
 -----------------------------------------------
 local Reader = {}
-local Dictionary = require(script.Parent.Dictionary)
-local Errors = require(script.Parent.Errors)
-local Signature = require(script.Parent.Signature)
+local Dictionary = require(script.Dictionary)
+local Errors = require(script.Errors)
+local Signature = require(script.Signature)
 -----------------------------------------------
 local HttpService = game:GetService("HttpService")
 -----------------------------------------------

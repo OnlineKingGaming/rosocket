@@ -21,10 +21,10 @@
 ]]--
 
 local RoSocket = {}
-local Reader = require(script.Parent.Reader)
-local Errors = require(script.Parent.Errors)
-local Signal = require(script.Parent.Signal)
-local Maid = require(script.Parent.Maid)
+local Reader = require(script.Reader)
+local Errors = require(script.Reader.Errors)
+local Signal = require(script.Signal)
+local Maid = require(script.Maid)
 
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
