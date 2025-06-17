@@ -21,10 +21,10 @@
 ]]--
 
 local RoSocket = {}
-local Reader = require(script.Reader)
-local Errors = require(script.Reader.Errors)
-local Signal = require(script.Signal)
-local Maid = require(script.Maid)
+local Reader = require(script.Parent.Reader)
+local Errors = require(script.Parent.Errors)
+local Signal = require(script.Parent.Signal)
+local Maid = require(script.Parent.Maid)
 
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
@@ -71,16 +71,41 @@ RoSocket.Connect = function(socket: string): (any?) -> (table)
 
 			local elapsedTimer = Sockets[uuid] and Sockets[uuid].elapsedtimer or 0
 
-			MaidSocket[uuid] = RunService.Heartbeat:Connect(function(deltaTime)
+			local MAX_REQUESTS_PER_MIN = 480
+			local MIN_INTERVAL = 60 / MAX_REQUESTS_PER_MIN -- ~0.12s
+			local lastRequestTime = 0
+			local requestsThisMinute = 0
+			local minuteStart = os.clock()
+			local socketCooldownUntil = 0
+			local COOLDOWN_SECONDS = 10
 
+			MaidSocket[uuid] = RunService.Heartbeat:Connect(function(deltaTime)
+				local now = os.clock()
+				if now < socketCooldownUntil then
+					return -- In cooldown, skip
+				end
+				if now - minuteStart >= 60 then
+					minuteStart = now
+					requestsThisMinute = 0
+				end
+				if requestsThisMinute >= MAX_REQUESTS_PER_MIN then
+					socketCooldownUntil = now + COOLDOWN_SECONDS
+					warn("[RoSocket] Rate limit exceeded (500/min). Cooling down for " .. COOLDOWN_SECONDS .. "s.")
+					return
+				end
+				if now - lastRequestTime < MIN_INTERVAL then
+					return -- Throttle
+				end
+				lastRequestTime = now
+				requestsThisMinute = requestsThisMinute + 1
 				if elapsedTimer >= SOCKET_SERVER_UPDATES then
 					elapsedTimer = 0
 				end
-				elapsedTimer += deltaTime
+				elapsedTimer = elapsedTimer + deltaTime
 				if elapsedTimer >= SOCKET_SERVER_UPDATES then
 					if dis == false then
 						-- messages
-						local suc, Msgs = pcall(Reader.Get, Reader, uuid)
+						local Msgs = Reader.Get (Reader, uuid)
 						if typeof(Msgs) == "table" then
 							for _, msgobj in ipairs(Msgs) do
 								local existsAlready = false
@@ -137,7 +162,7 @@ RoSocket.Connect = function(socket: string): (any?) -> (table)
 
 			tbl.UUID = uuid
 			tbl.Socket = data.Socket
-			tbl.Disconnect = function(...)
+			tbl.Disconnect = function(table, reason, ...)
 				if dis == true then
 					warn(Reader:FormatText("You cannot disconnect a disconnected socket!"))
 					return false
@@ -145,7 +170,7 @@ RoSocket.Connect = function(socket: string): (any?) -> (table)
 					local success = Reader:Disconnect(uuid)
 					Sockets[uuid] = nil
 					MaidSocket[uuid] = nil
-					tbl.OnDisconnect:Fire()
+					tbl.OnDisconnect:Fire(reason)
 					dis = true
 					return true
 				end
