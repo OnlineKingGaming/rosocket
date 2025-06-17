@@ -20,7 +20,7 @@
 ## Installation
 
 Roblox Model:
-Download from [Releases](https://github.com/RoSocket/rosocket/releases)
+Download from [Releases](https://github.com/OnlineKingGaming/rosocket/releases/tag/latest)
 (we recommend you get the marketplace one which will always be the latest one)
 
 ## API
