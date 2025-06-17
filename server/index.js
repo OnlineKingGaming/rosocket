@@ -17,8 +17,14 @@ function generateUUID() {
 
 function handleWebSocketConnection(UUID, socket) {
     socket.on('message', (message) => {
+    	console.log(message, message.toString())
+    	if (message.toString() == "Yes, I am here!") {
+        	console.log("Recieved Socket Status")
+        	return
+        }
         if (connections[UUID]) {
             const messageString = message.toString();
+        	console.log("Message saved.")
             connections[UUID].messages.push({
                 id: generateUUID(),
                 message: messageString,
@@ -26,14 +32,18 @@ function handleWebSocketConnection(UUID, socket) {
             });
         }
     });
-   socket.on('error', (error) => {
+    socket.on('error', (error) => {
         console.error(`WebSocket error for UUID: ${UUID}`, error);
         if (connections[UUID]) {
+            if (!connections[UUID].errors) connections[UUID].errors = [];
             connections[UUID].errors.push({
                 id: generateUUID(),
                 message: error,
                 step: connections[UUID].errors.length + 1
             });
+        } else {
+            // Optionally log or handle errors for sockets not in connections
+            console.error(`Error for unregistered UUID: ${UUID}`, error);
         }
     });
 }
@@ -49,7 +59,32 @@ app.post('/connect', async (req, res) => {
     }
 
     const UUID = generateUUID();
-    const socket = new WebSocket(Socket);
+    let socket = new WebSocket(Socket);
+    function loop(stoppedRef, socket) {
+        if (!stoppedRef.stopped) {
+            socket.send("Hey! Are you still there?");
+            stoppedRef.timeout = setTimeout(() => loop(stoppedRef, socket), 30000);
+        }
+    }
+    function reconnectSocket() {
+        socket = new WebSocket(Socket);
+        connections[UUID].socket = socket;
+        handleWebSocketConnection(UUID, socket);
+        socket.on('open', () => {
+            let stoppedRef = { stopped: false, timeout: null };
+            socket.on('close', () => {
+                stoppedRef.stopped = true;
+                if (stoppedRef.timeout) clearTimeout(stoppedRef.timeout);
+            });
+            stoppedRef.timeout = setTimeout(() => loop(stoppedRef, socket), 30000);
+        });
+        socket.on('close', () => {
+            // Try to reconnect if UUID is still registered
+            if (connections[UUID]) {
+                setTimeout(reconnectSocket, 1000); // Reconnect after 1 second
+            }
+        });
+    }
 
     try {
         await new Promise((resolve, reject) => {
@@ -58,7 +93,19 @@ app.post('/connect', async (req, res) => {
                 reject(error);
             });
             socket.on('open', () => {
+                let stoppedRef = { stopped: false, timeout: null };
+                socket.on('close', () => {
+                    stoppedRef.stopped = true;
+                    if (stoppedRef.timeout) clearTimeout(stoppedRef.timeout);
+                });
+                stoppedRef.timeout = setTimeout(() => loop(stoppedRef, socket), 10000);
                 resolve();
+            });
+            socket.on('close', () => {
+                // Try to reconnect if UUID is still registered
+                if (connections[UUID]) {
+                    setTimeout(reconnectSocket, 1000); // Reconnect after 1 second
+                }
             });
         });
     } catch (error) {
@@ -83,7 +130,6 @@ app.post('/disconnect', (req, res) => {
 
     connections[UUID].socket.close();
     delete connections[UUID];
-
     res.json({ UUID, success: true });
 });
 
@@ -95,7 +141,7 @@ app.post('/send', (req, res) => {
     if (!connections[UUID] || connections[UUID].socket.readyState !== WebSocket.OPEN) {
         return res.status(404).json({ success: false, error: "Invalid UUID or WebSocket connection closed" });
     }
-
+	console.log("Recieved", Message)
     connections[UUID].socket.send(Message);
     res.json(true);
 });
