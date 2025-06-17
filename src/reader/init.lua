@@ -8,8 +8,8 @@
 ]]--
 -----------------------------------------------
 local Reader = {}
-local Dictionary = require(script.Dictionary)
-local Errors = require(script.Errors)
+local Dictionary = require(script.Parent.Dictionary)
+local Errors = require(script.Parent.Errors)
 local Signature = require(script.Parent.Signature)
 -----------------------------------------------
 local HttpService = game:GetService("HttpService")
@@ -105,6 +105,9 @@ function Reader:Disconnect<T>(id: string?, ...: any?): boolean
 	end
 end
 function Reader:Send<T>(id: string?, message: string?, ...): boolean
+	if typeof(message) == "table" then
+		message = ...
+	end
 	local Response : RequestResponse = HttpService:RequestAsync({
 		Url = `{SOCKET_SERVER_URL}{Dictionary.Send}`,
 		Method = "POST",
@@ -129,6 +132,7 @@ function Reader:Send<T>(id: string?, message: string?, ...): boolean
 	end
 end
 function Reader:Get<T>(id: string?, ...): any
+	wait(0.5)
 	local Response : RequestResponse = HttpService:RequestAsync({
 		Url = `{SOCKET_SERVER_URL}{Dictionary.Get}`,
 		Method = "POST",
@@ -137,7 +141,6 @@ function Reader:Get<T>(id: string?, ...): any
 		},
 		Body = HttpService:JSONEncode({UUID = tostring(id)})
 	})
-
 	if Response.Success == true then 
 		local DecodedSuccess, DecodedResult = pcall(function() 
 			return HttpService:JSONDecode(Response.Body)
