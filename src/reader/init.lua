@@ -10,7 +10,7 @@
 local Reader = {}
 local Dictionary = require(script.Dictionary)
 local Errors = require(script.Errors)
-local Signature = require(script.Signature)
+local Signature = require(script.Parent.Signature)
 -----------------------------------------------
 local HttpService = game:GetService("HttpService")
 -----------------------------------------------
